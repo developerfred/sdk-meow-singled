@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Token Factory Test</title>
+  </head>
+  <body>
+    <h1>Criar um Novo Token</h1>
+    <button onclick="createToken()">Criar Token</button>
+
+    <script>
+      // Importe o SDK ou copie a classe TokenFactory aqui
+
+      // Endereço do contrato de fábrica de tokens (substitua pelo seu)
+      const tokenFactoryAddress = "0xYourTokenFactoryAddress";
+
+      // Instancie a classe TokenFactory
+      const tokenFactory = new TokenFactory(tokenFactoryAddress);
+
+      async function createToken() {
+        try {
+          const name = "Meu Token";
+          const symbol = "MTK";
+          const initialSupply = 1000000; // Exemplo: 1 milhão de tokens
+          const reserveWeight = 50; // Peso da reserva (exemplo: 50%)
+          const slope = 100; // Exemplo: 100
+          const creator = "0xYourWalletAddress"; // Endereço da sua carteira
+          const reserveTokenAddress = "0xYourReserveTokenAddress"; // Endereço do token de reserva
+          const exchangeAddress = "0xYourExchangeAddress"; // Endereço da exchange
+
+          const tokenAddress = await tokenFactory.createToken(
+            name,
+            symbol,
+            initialSupply,
+            reserveWeight,
+            slope,
+            creator,
+            reserveTokenAddress,
+            exchangeAddress,
+          );
+
+          console.log(`Token criado com sucesso! Endereço: ${tokenAddress}`);
+        } catch (error) {
+          console.error("Erro ao criar o token:", error);
+        }
+      }
+    </script>
+  </body>
+</html>
