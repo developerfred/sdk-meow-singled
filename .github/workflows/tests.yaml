@@ -1,12 +1,11 @@
 name: Tests
 on:
   push:
-      branches:
-          - main
+    branches:
+      - main
   pull_request:
   schedule:
     - cron: "0 0 * * *" # daily
-
 
 jobs:
   test:
@@ -23,39 +22,38 @@ jobs:
 
       - name: Install Dependencies
         run: bun install
-     
+
       - name: Lint
         run: bun run fmt
 
       - name: Run tests
         run: bun test src --bail --coverage
-      
+
       - name: Build
         run: bun run build
 
- 
   nextjs-local:
     needs:
       - test
-    
+
     runs-on: ubuntu-latest
     steps:
       - name: Setup repo
         uses: actions/checkout@v3
-    
+
       - name: Install bun
         run: npm install -g bun
-        
+
       - name: Install Dependencies
         run: bun install
-            
+
       - name: Build
         run: bun run build
-  
+
       - name: Install example
         run: |
           bun install
-          bun add @chronark/sdk@../..
+          bun add @codingsh/meow-sdk@../..
         working-directory: ./examples/nextjs
 
       - name: Build example
@@ -65,12 +63,11 @@ jobs:
       - name: Start example
         run: bun run start &
         working-directory: ./examples/nextjs
-      
+
       - name: Test
         run: bun test examples/nextjs/ci.test.ts
         env:
           DEPLOYMENT_URL: http://localhost:3000
-
 
   nextjs-deployed:
     concurrency: nextjs-deployed
@@ -90,7 +87,7 @@ jobs:
         run: npm install -g bun
 
       - name: Install Canary
-        run: bun install @chronark/sdk@${{needs.release.outputs.version}}
+        run: bun install @codingsh/meow-sdk@${{needs.release.outputs.version}}
         working-directory: ./examples/nextjs
 
       - name: Deploy
@@ -100,62 +97,60 @@ jobs:
         env:
           VERCEL_ORG_ID: ${{secrets.VERCEL_ORG_ID}}
           VERCEL_PROJECT_ID: ${{secrets.VERCEL_PROJECT_ID}}
-      
+
       - name: Test
         run: bun test examples/nextjs/ci.test.ts
-
 
   cloudflare-local:
     needs:
       - test
-    
+
     runs-on: ubuntu-latest
     steps:
       - name: Setup repo
         uses: actions/checkout@v3
-    
+
       - name: Install bun
         run: npm install -g bun
-        
+
       - name: Install Dependencies
         run: bun install
-            
+
       - name: Build
         run: bun run build
-  
+
       - name: Install example
         run: |
           npm install
-          npm install @chronark/sdk@../..
+          npm install @codingsh/meow-sdk@../..
           npm install -g wrangler
         working-directory: ./examples/cloudflare
 
       - name: Start example
         run: wrangler dev & sleep 5
         working-directory: ./examples/cloudflare
-     
+
       - name: Test
         run: bun test examples/cloudflare/ci.test.ts
         env:
           DEPLOYMENT_URL: http://127.0.0.1:8787
 
-
   cloudflare-deployed:
     needs:
       - release
-    
+
     runs-on: ubuntu-latest
     steps:
       - name: Setup repo
         uses: actions/checkout@v3
-    
+
       - name: Install bun
         run: npm install -g bun
-        
+
       - name: Install example
         run: |
           npm install
-          npm install @chronark/sdk@${{needs.release.outputs.version}}
+          npm install @codingsh/meow-sdk@${{needs.release.outputs.version}}
           npm install -g wrangler
         working-directory: ./examples/cloudflare
 
@@ -169,8 +164,6 @@ jobs:
         env:
           DEPLOYMENT_URL: https://sdk.chronark.workers.dev
 
-
- 
   deno-deployed:
     concurrency: deno-deployed
     needs:
@@ -179,16 +172,18 @@ jobs:
     steps:
       - name: Setup repo
         uses: actions/checkout@v3
-      
+
       - name: Install bun
         run: npm install -g bun
-      
+
       - uses: denoland/setup-deno@v1
         with:
           deno-version: v1.x
 
-      - name: Install @chronark/sdk canary version
-        run: sed -i 's;@chronark/sdk@latest;@chronark/sdk@${{needs.release.outputs.version}};' ./examples/deno/main.ts   
+      - name: Install @codingsh/meow-sdk canary version
+        run:
+          sed -i 's;@codingsh/meow-sdk@latest;@codingsh/meow-sdk@${{needs.release.outputs.version}};'
+          ./examples/deno/main.ts
 
       - name: Deploy
         run: deno run -A https://deno.land/x/deploy/deployctl.ts deploy --project=chronark-sdk ./main.ts
@@ -201,7 +196,6 @@ jobs:
         env:
           DEPLOYMENT_URL: https://upstash-redis-70jbfgxwz310.deno.dev
 
-    
   release:
     concurrency: release
     outputs:
@@ -209,7 +203,7 @@ jobs:
     needs:
       - nextjs-local
       - cloudflare-local
-      
+
     name: Canary Release
     runs-on: ubuntu-latest
     steps:
@@ -231,11 +225,11 @@ jobs:
       - name: Set package version
         run: |
           jq '.version = "${{ steps.version.outputs.version }}"' <<< cat package.json > tmp.json
-          mv tmp.json package.json 
+          mv tmp.json package.json
 
       - name: Install Dependencies
         run: bun install
-      
+
       - name: Build
         run: bun run build
 
