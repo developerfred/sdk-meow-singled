@@ -1,12 +1,13 @@
+import { Address, getContract, parseAbi } from "viem";
+
 import { client } from "./client";
 import { TOKEN_FACTORY } from "./constants";
-import { Address, getContract, parseAbi } from "viem";
 
 const abiFactory = parseAbi([
   "function createToken(string name, string symbol, uint256 initialSupply, uint256 reserveWeight, uint256 slope, address creator, address reserveTokenAddress, address _exchangeAddress)",
 ]);
 
-export abstract class TokenFactory {
+export class TokenFactory {
   private tokenFactoryContract: any;
 
   constructor(tokenFactoryAddress: Address = TOKEN_FACTORY) {
@@ -25,7 +26,7 @@ export abstract class TokenFactory {
     slope: number,
     creator: string,
     reserveTokenAddress: string,
-    exchangeAddress: string
+    exchangeAddress: string,
   ): Promise<string> {
     try {
       const tokenAddress = await this.tokenFactoryContract.createToken(
@@ -36,7 +37,7 @@ export abstract class TokenFactory {
         slope,
         creator,
         reserveTokenAddress,
-        exchangeAddress
+        exchangeAddress,
       );
 
       console.log(`Token criado com sucesso! Endereço: ${tokenAddress}`);
