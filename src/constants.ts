@@ -20,8 +20,7 @@ const selectedNetwork = "sepolia";
 
 export const TOKEN_FACTORY = networkAddresses[selectedNetwork].TOKEN_FACTORY;
 
-export const EXCHANGE_ADDRESS =
-  networkAddresses[selectedNetwork].EXCHANGE_ADDRESS;
+export const EXCHANGE_ADDRESS = networkAddresses[selectedNetwork].EXCHANGE_ADDRESS;
 
 export const MEOW_ADDRESS = networkAddresses[selectedNetwork].MEOW_ADDRESS;
 
