@@ -1,0 +1,65 @@
+{
+  "name": "@codingsh/meow-sdk",
+  "description": "the meow single pool sdk",
+  "version": "0.0.2",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/developerfred/sdk-meow-singled.git"
+  },
+  "author": {
+    "name": "Codingsh",
+    "url": "https://github.com/developerfred"
+  },
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/developerfred/sdk-meow-singled/issues"
+  },
+  "homepage": "https://github.com/developerfred/sdk-meow-singled#readme",
+  "files": [
+    "README.md",
+    "LICENSE",
+    "./dist"
+  ],
+  "keywords": [
+    "bun",
+    "eslint",
+    "javascript",
+    "prettier",
+    "template",
+    "typescript"
+  ],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "module": "./dist/index.mjs",
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "bun-types": "latest",
+    "tsup": "^7.2.0",
+    "@trivago/prettier-plugin-sort-imports": "^3.3.1",
+    "@types/node": "^18.15.5",
+    "@typescript-eslint/eslint-plugin": "^5.56.0",
+    "@typescript-eslint/parser": "^5.56.0",
+    "eslint": "^8.36.0",
+    "eslint-config-prettier": "^8.8.0",
+    "prettier": "^2.8.6",
+    "rimraf": "^4.4.1",
+    "ts-node": "^10.9.1"
+  },
+  "scripts": {
+    "build": "tsup",
+    "clean": "rimraf dist",
+    "lint": "bun run lint:ts && bun run prettier:check && bun run typecheck",
+    "lint:ts": "eslint --ext .js,.ts .",
+    "prettier:check": "prettier --check \"**/*.{js,json,md,ts,yml}\"",
+    "prettier:write": "prettier --write \"**/*.{js,json,md,ts,yml}\"",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.2",
+    "viem": "^2.7.22"
+  }
+}
