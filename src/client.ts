@@ -1,6 +1,8 @@
 import { createClient, createWalletClient, custom, http } from "viem";
 import { mainnet, sepolia } from "viem/chains";
 
+const isBrowser = typeof window.ethereum! !== "undefined";
+
 const publicClient = createClient({
   batch: {
     multicall: true,
@@ -11,7 +13,7 @@ const publicClient = createClient({
 
 const client = createWalletClient({
   chain: sepolia,
-  transport: custom(window.ethereum!),
+  transport: isBrowser ? custom(window.ethereum!) : http(`https://endpoints.omniatech.io/v1/eth/sepolia/public`),
 });
 
 export { client, publicClient };
