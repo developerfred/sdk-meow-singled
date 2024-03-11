@@ -1,9 +1,9 @@
-import { http, createClient } from "viem";
+import { createClient, custom, http } from "viem";
 import { mainnet } from "viem/chains";
 
 const client = createClient({
   chain: mainnet,
-  transport: http("https://ethereum-sepolia-rpc.publicnode.com"),
+  transport: custom(window.ethereum!),
 });
 
 export { client };
