@@ -32,7 +32,7 @@ export class TokenExchange {
 
   async sellTokens(tokenAddress: Address, tokenAmount: typeof maxUint256): Promise<string> {
     try {
-      const hash = await this.exchangeContract.write.sellToken(tokenAddress, reserveAmount);
+      const hash = await this.exchangeContract.write.sellToken(tokenAddress, tokenAmount);
       const logs = await this.exchangeContract.getEvents.sellToken();
       const unwatch = this.exchangeContract.watchEvent.sellToken(
         {
