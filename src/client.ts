@@ -1,10 +1,11 @@
 import { createClient, createWalletClient, custom, http } from "viem";
 import { sepolia } from "viem/chains";
 
-const isBrowser = typeof window.ethereum !== "undefined";
+const isBrowser = typeof window !== "undefined" && typeof window.ethereum !== "undefined";
 
-const createTransport = (isBrowser: boolean) =>
-  isBrowser ? custom(window.ethereum) : http("https://endpoints.omniatech.io/v1/eth/sepolia/public");
+const createTransport = (isBrowser: boolean) => {
+  return isBrowser ? custom(window.ethereum) : http("https://endpoints.omniatech.io/v1/eth/sepolia/public");
+};
 
 const createViemClient = ({ useWalletClient = false }) => {
   const transport = createTransport(isBrowser);
