@@ -3,59 +3,79 @@ import { Address, getContract, maxUint256, parseAbi } from "viem";
 import { client, publicClient } from "./client";
 import { EXCHANGE_ADDRESS } from "./constants";
 
+interface IExchangeContract {
+  read: {
+    [functionName: string]: (...args: any[]) => Promise<any>;
+  };
+  simulate: {
+    [functionName: string]: (...args: any[]) => Promise<any>;
+  };
+  createEventFilter: {
+    [eventName: string]: (...args: any[]) => Promise<any>;
+  };
+  getEvents: {
+    [eventName: string]: (...args: any[]) => Promise<any>;
+  };
+  watchEvent: {
+    [eventName: string]: (...args: any[]) => Promise<any>;
+  };
+  write: {
+    [functionName: string]: (...args: any[]) => Promise<any>;
+  };
+  address: Address;
+  abi: any;
+  client: {
+    public: typeof publicClient;
+    wallet: typeof client;
+  };
+}
+
 const abiExchange = parseAbi([
   "function buyToken(address token, uint256 reserveAmount)",
   "function sellToken(address token, uint256 tokenAmount)",
 ]);
 
-export class TokenExchange {
-  private exchangeContract: any;
+class TokenExchange {
+  private exchangeContract: IExchangeContract;
 
   constructor(tokenExchangeAddress: Address = EXCHANGE_ADDRESS) {
-    this.exchangeContract = getContract({
+    this.exchangeContract = this.initializeContract(tokenExchangeAddress);
+  }
+
+  private initializeContract(tokenExchangeAddress: Address): IExchangeContract {
+    const contract = getContract({
       address: tokenExchangeAddress,
       abi: abiExchange,
       client: { public: publicClient, wallet: client },
     });
+
+    return contract as unknown as IExchangeContract;
+  }
+
+  private async executeTokenOperation(
+    operation: "buyToken" | "sellToken",
+    tokenAddress: Address,
+    amount: typeof maxUint256,
+  ): Promise<string> {
+    try {
+      const hash = await this.exchangeContract.write[operation](tokenAddress, amount);
+      console.log(
+        `Operation: ${operation}, Token Address: ${tokenAddress}, Amount: ${amount}, Transaction Hash: ${hash}`,
+      );
+      return hash;
+    } catch (error) {
+      console.error(`Failed to execute ${operation} for token at address ${tokenAddress} with amount ${amount}`, error);
+      throw error;
+    }
   }
 
   async buyTokens(tokenAddress: Address, reserveAmount: typeof maxUint256): Promise<string> {
-    try {
-      const hash = await this.exchangeContract.write.buyToken(tokenAddress, reserveAmount);
-      console.log(`Token Amount Buy: ${reserveAmount} and hash: ${hash}`);
-      return hash;
-    } catch (error) {
-      console.error("Error buying token:", error);
-      throw error;
-    }
+    return this.executeTokenOperation("buyToken", tokenAddress, reserveAmount);
   }
 
   async sellTokens(tokenAddress: Address, tokenAmount: typeof maxUint256): Promise<string> {
-    try {
-      const hash = await this.exchangeContract.write.sellToken(tokenAddress, tokenAmount);
-      const logs = await this.exchangeContract.getEvents.sellToken();
-      const unwatch = this.exchangeContract.watchEvent.sellToken(
-        {
-          to: EXCHANGE_ADDRESS,
-        },
-        { onLogs: (logs: any) => console.log(logs) },
-      );
-
-      console.log(`Token Amount Sell: ${tokenAmount} and hash: ${hash}`);
-      return hash;
-    } catch (error) {
-      console.error("Error selling token:", error);
-      throw error;
-    }
-  }
-
-  static buy(tokenAddress: Address, reserveAmount: typeof maxUint256) {
-    const exchange = new TokenExchange(EXCHANGE_ADDRESS);
-    return exchange.buyTokens(tokenAddress, reserveAmount);
-  }
-
-  static sell(tokenAddress: Address, tokenAmount: typeof maxUint256) {
-    const exchange = new TokenExchange(EXCHANGE_ADDRESS);
-    return exchange.sellTokens(tokenAddress, tokenAmount);
+    return this.executeTokenOperation("sellToken", tokenAddress, tokenAmount);
   }
 }
+
+export { TokenExchange };

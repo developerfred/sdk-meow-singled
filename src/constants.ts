@@ -1,6 +1,15 @@
-import { getAddress } from "viem";
+import { Address, getAddress } from "viem";
 
-const networkAddresses = {
+interface NetworkAddresses {
+  [key: string]: {
+    TOKEN_FACTORY: Address;
+    EXCHANGE_ADDRESS: Address;
+    MEOW_ADDRESS: Address;
+    ADDRESS_ZERO: Address;
+  };
+}
+
+const networkAddresses: NetworkAddresses = {
   mainnet: {
     TOKEN_FACTORY: getAddress("0x927294e922c3f8FbdC34Bd8b1875aE3D3e1637dF"),
     EXCHANGE_ADDRESS: getAddress("0x6dba9e1d90afa4a97e2a819bcc1ad22deaf81794"),
@@ -13,15 +22,23 @@ const networkAddresses = {
     MEOW_ADDRESS: getAddress("0x54ceabc39627d9ceb578bb5fc4ce3db972b2ce69"),
     ADDRESS_ZERO: getAddress("0x0000000000000000000000000000000000000000"),
   },
-  rinkeby: {},
+  rinkeby: {
+    TOKEN_FACTORY: getAddress("0x0000000000000000000000000000000000000000"),
+    EXCHANGE_ADDRESS: getAddress("0x0000000000000000000000000000000000000000"),
+    MEOW_ADDRESS: getAddress("0x0000000000000000000000000000000000000000"),
+    ADDRESS_ZERO: getAddress("0x0000000000000000000000000000000000000000"),
+  },
 };
 
-const selectedNetwork = "sepolia";
+const getNetworkAddresses = (selectedNetwork: keyof NetworkAddresses) => {
+  const addresses = networkAddresses[selectedNetwork];
+  if (!addresses) {
+    throw new Error(`Network "${selectedNetwork}" not supported.`);
+  }
+  return addresses;
+};
 
-export const TOKEN_FACTORY = networkAddresses[selectedNetwork].TOKEN_FACTORY;
+const selectedNetwork = "sepolia" as keyof NetworkAddresses;
+const { TOKEN_FACTORY, EXCHANGE_ADDRESS, MEOW_ADDRESS, ADDRESS_ZERO } = getNetworkAddresses(selectedNetwork);
 
-export const EXCHANGE_ADDRESS = networkAddresses[selectedNetwork].EXCHANGE_ADDRESS;
-
-export const MEOW_ADDRESS = networkAddresses[selectedNetwork].MEOW_ADDRESS;
-
-export const ADDRESS_ZERO = networkAddresses[selectedNetwork].ADDRESS_ZERO;
+export { TOKEN_FACTORY, EXCHANGE_ADDRESS, MEOW_ADDRESS, ADDRESS_ZERO };

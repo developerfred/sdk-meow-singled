@@ -3,19 +3,31 @@ import { Address, getContract, parseAbi } from "viem";
 import { client, publicClient } from "./client";
 import { TOKEN_FACTORY } from "./constants";
 
+interface ITokenFactoryContract {
+  write: {
+    createToken: (...args: any[]) => Promise<string>;
+  };
+  getEvents: {
+    createToken: () => Promise<any>;
+  };
+  watchEvent: {
+    createToken: (filter: object, options: { onLogs: (logs: any) => void }) => Promise<void>;
+  };
+}
+
 const abiFactory = parseAbi([
   "function createToken(string name, string symbol, uint256 initialSupply, uint256 reserveWeight, uint256 slope, address creator, address reserveTokenAddress, address _exchangeAddress)",
 ]);
 
 export class TokenFactory {
-  private tokenFactoryContract: any;
+  private tokenFactoryContract: ITokenFactoryContract;
 
   constructor(tokenFactoryAddress: Address = TOKEN_FACTORY) {
     this.tokenFactoryContract = getContract({
       address: tokenFactoryAddress,
       abi: abiFactory,
       client: { public: publicClient, wallet: client },
-    });
+    }) as unknown as ITokenFactoryContract;
   }
 
   async createToken(
@@ -24,9 +36,9 @@ export class TokenFactory {
     initialSupply: number,
     reserveWeight: number,
     slope: number,
-    creator: string,
-    reserveTokenAddress: string,
-    exchangeAddress: string,
+    creator: Address,
+    reserveTokenAddress: Address,
+    exchangeAddress: Address,
   ): Promise<string> {
     try {
       const hash = await this.tokenFactoryContract.write.createToken(
@@ -39,43 +51,12 @@ export class TokenFactory {
         reserveTokenAddress,
         exchangeAddress,
       );
-      const logs = await this.tokenFactoryContract.getEvents.createToken();
-      const unwatch = this.tokenFactoryContract.watchEvent.createToken(
-        {
-          from: creator,
-          to: TOKEN_FACTORY,
-        },
-        { onLogs: (logs: any) => console.log(logs) },
-      );
 
-      console.log(`hash transaction: ${hash} && logs ${logs} && ${unwatch}`);
+      console.log(`Transaction hash: ${hash}`);
       return hash;
     } catch (error) {
-      console.error("Erro ao criar o token:", error);
+      console.error("Error creating token:", error);
       throw error;
     }
-  }
-
-  static createToken(
-    name: string,
-    symbol: string,
-    initialSupply: number,
-    reserveWeight: number,
-    slope: number,
-    creator: string,
-    reserveTokenAddress: string,
-    exchangeAddress: string,
-  ) {
-    const Factory = new TokenFactory(TOKEN_FACTORY);
-    return Factory.createToken(
-      name,
-      symbol,
-      initialSupply,
-      reserveWeight,
-      slope,
-      creator,
-      exchangeAddress,
-      reserveTokenAddress,
-    );
   }
 }
