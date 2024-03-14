@@ -1,33 +1,37 @@
 import { Address, getContract, maxUint256, parseAbi } from "viem";
 
 import { tokenExchangeAbi } from "./abis/tokenExchange";
-import { client, publicClient } from "./client";
+import { clientManager } from "./clientManager";
 import { EXCHANGE_ADDRESS } from "./constants";
+
+type ContractFunction<T extends any[] = any[], R = any> = (...args: T) => Promise<R>;
+type ContractEvent<T extends any[] = any[], R = any> = (...args: T) => Promise<R>;
 
 interface IExchangeContract {
   read: {
-    [functionName: string]: (...args: any[]) => Promise<any>;
+    [functionName: string]: ContractFunction;
   };
   simulate: {
-    [functionName: string]: (...args: any[]) => Promise<any>;
+    [functionName: string]: ContractFunction;
   };
   createEventFilter: {
-    [eventName: string]: (...args: any[]) => Promise<any>;
+    [eventName: string]: ContractEvent;
   };
   getEvents: {
-    [eventName: string]: (...args: any[]) => Promise<any>;
+    [eventName: string]: ContractEvent;
   };
   watchEvent: {
-    [eventName: string]: (...args: any[]) => Promise<any>;
+    [eventName: string]: ContractEvent;
   };
   write: {
-    [functionName: string]: (...args: any[]) => Promise<any>;
+    buyToken: ContractFunction<[Address, typeof maxUint256], string>;
+    sellToken: ContractFunction<[Address, typeof maxUint256], string>;
   };
   address: Address;
-  abi: any;
+  abi: typeof tokenExchangeAbi;
   client: {
-    public: typeof publicClient;
-    wallet: typeof client;
+    public: ReturnType<typeof clientManager.getPublicClient>;
+    wallet: ReturnType<typeof clientManager.getClient>;
   };
 }
 
@@ -42,14 +46,17 @@ class TokenExchange {
     const contract = getContract({
       address: tokenExchangeAddress,
       abi: tokenExchangeAbi,
-      client: { public: publicClient, wallet: client },
+      client: {
+        public: clientManager.getPublicClient()!,
+        wallet: clientManager.getClient()!,
+      },
     });
 
     return contract as unknown as IExchangeContract;
   }
 
   private async executeTokenOperation(
-    operation: "buyToken" | "sellToken",
+    operation: keyof IExchangeContract["write"],
     tokenAddress: Address,
     amount: typeof maxUint256,
   ): Promise<string> {

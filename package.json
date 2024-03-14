@@ -1,7 +1,7 @@
 {
   "name": "@codingsheth/meow-sdk",
   "description": "the meow single pool sdk",
-  "version": "0.4.9",
+  "version": "0.5.9",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/developerfred/sdk-meow-singled.git"
@@ -63,5 +63,8 @@
     "jest": "^29.7.0",
     "ts-jest": "^29.1.2",
     "viem": "^2.7.22"
+  },
+  "dependencies": {
+    "viem": "^2.8.6"
   }
 }

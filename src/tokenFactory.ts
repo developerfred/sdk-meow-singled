@@ -1,15 +1,24 @@
 import { Address, getContract, parseAbi } from "viem";
 
 import { tokenFactoryAbi } from "./abis/tokenFactory";
-import { client, publicClient } from "./client";
+import { clientManager } from "./clientManager";
 import { TOKEN_FACTORY } from "./constants";
 
 interface ITokenFactoryContract {
   read: {
-    getTokenConfig: (...args: any[]) => Promise<string>;
+    getTokenConfig: (tokenAddress: Address) => Promise<TokenConfig>;
   };
   write: {
-    createToken: (...args: any[]) => Promise<string>;
+    createToken: (
+      name: string,
+      symbol: string,
+      initialSupply: number,
+      reserveWeight: number,
+      slope: number,
+      creator: Address,
+      reserveTokenAddress: Address,
+      exchangeAddress: Address,
+    ) => Promise<string>;
   };
   getEvents: {
     createToken: () => Promise<any>;
@@ -27,14 +36,23 @@ interface TokenConfig {
 }
 
 export class TokenFactory {
-  private tokenFactoryContract: ITokenFactoryContract;
+  private tokenFactoryContractPromise: Promise<ITokenFactoryContract>;
 
   constructor(tokenFactoryAddress: Address = TOKEN_FACTORY) {
-    this.tokenFactoryContract = getContract({
+    this.tokenFactoryContractPromise = this.initializeContract(tokenFactoryAddress);
+  }
+
+  private async initializeContract(tokenFactoryAddress: Address): Promise<ITokenFactoryContract> {
+    await clientManager.ensureInitialized();
+    const contract = getContract({
       address: tokenFactoryAddress,
       abi: tokenFactoryAbi,
-      client: { public: publicClient, wallet: client },
-    }) as unknown as ITokenFactoryContract;
+      client: {
+        public: clientManager.getPublicClient()!,
+        wallet: clientManager.getClient()!,
+      },
+    });
+    return contract as unknown as ITokenFactoryContract;
   }
 
   async createToken(
@@ -47,43 +65,21 @@ export class TokenFactory {
     reserveTokenAddress: Address,
     exchangeAddress: Address,
   ): Promise<string> {
-    try {
-      const hash = await this.tokenFactoryContract.write.createToken(
-        name,
-        symbol,
-        initialSupply,
-        reserveWeight,
-        slope,
-        creator,
-        reserveTokenAddress,
-        exchangeAddress,
-      );
-
-      console.log(`Transaction hash: ${hash}`);
-      return hash;
-    } catch (error) {
-      console.error("Error creating token:", error);
-      throw error;
-    }
+    const contract = await this.tokenFactoryContractPromise;
+    return contract.write.createToken(
+      name,
+      symbol,
+      initialSupply,
+      reserveWeight,
+      slope,
+      creator,
+      reserveTokenAddress,
+      exchangeAddress,
+    );
   }
 
-  async getTokenConfig(tokenAddress: Address): Promise<{ config: TokenConfig }> {
-    try {
-      const result: any = await this.tokenFactoryContract.read.getTokenConfig(tokenAddress);
-
-      const [configTuple]: [[string, string, bigint, bigint]] = result;
-
-      const config: TokenConfig = {
-        tokenAddress: configTuple[0],
-        reserveToken: configTuple[1],
-        slope: configTuple[2].toString(),
-        reserveWeight: configTuple[3].toString(),
-      };
-
-      return { config };
-    } catch (error) {
-      console.error("Error getting token config:", error);
-      throw error;
-    }
+  async getTokenConfig(tokenAddress: Address): Promise<TokenConfig> {
+    const contract = await this.tokenFactoryContractPromise;
+    return contract.read.getTokenConfig(tokenAddress);
   }
 }
