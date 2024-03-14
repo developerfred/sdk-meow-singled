@@ -8,30 +8,36 @@ class ClientManager {
   private initializePromise: Promise<void>;
 
   constructor() {
-    this.initializePromise = this.initialize(); // Armazena a promessa de inicialização
+    this.initializePromise = this.initialize();
+  }
+
+  private isBrowser(): boolean {
+    return typeof window !== "undefined" && typeof window.ethereum !== "undefined";
+  }
+
+  private async createViemClient(useWalletClient: boolean): Promise<Client | WalletClient> {
+    const transport = this.isBrowser()
+      ? custom(window.ethereum!)
+      : http("https://endpoints.omniatech.io/v1/eth/sepolia/public");
+
+    const clientOptions = {
+      batch: { multicall: true },
+      chain: sepolia,
+      transport,
+    };
+
+    return useWalletClient ? createWalletClient(clientOptions) : createClient(clientOptions);
   }
 
   private async initialize(): Promise<void> {
-    const isBrowser: boolean = typeof window !== "undefined" && typeof window.ethereum !== "undefined";
-    const transport = isBrowser
-      ? custom(window.ethereum)
-      : http("https://endpoints.omniatech.io/v1/eth/sepolia/public");
+    this.publicClient = (await this.createViemClient(false)) as Client;
+    this.client = (await this.createViemClient(true)) as WalletClient;
 
-    const createViemClient = async (useWalletClient: boolean): Promise<Client | WalletClient> => {
-      const clientOptions = {
-        batch: { multicall: true },
-        chain: sepolia,
-        transport,
-      };
-
-      return useWalletClient ? await createWalletClient(clientOptions) : await createClient(clientOptions);
-    };
-
-    this.publicClient = (await createViemClient(false)) as Client;
-    this.client = (await createViemClient(true)) as WalletClient;
-
-    if ("getAddresses" in this.client) {
-      [this.account] = await (this.client as any).getAddresses();
+    if (this.client && "getAddresses" in this.client) {
+      const addresses = await this.client.getAddresses();
+      if (addresses.length > 0) {
+        this.account = addresses[0];
+      }
     }
   }
 
