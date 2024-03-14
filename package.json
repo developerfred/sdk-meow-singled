@@ -1,7 +1,7 @@
 {
   "name": "@codingsheth/meow-sdk",
   "description": "the meow single pool sdk",
-  "version": "0.0.8",
+  "version": "0.1.9",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/developerfred/sdk-meow-singled.git"
@@ -55,7 +55,8 @@
     "lint:ts": "eslint --ext .js,.ts .",
     "prettier:check": "prettier --check \"**/*.{js,json,md,ts,yml}\"",
     "prettier:write": "prettier --write \"**/*.{js,json,md,ts,yml}\"",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "jest"
   },
   "peerDependencies": {
     "typescript": "^5.0.0",
