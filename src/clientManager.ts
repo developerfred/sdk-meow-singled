@@ -5,40 +5,68 @@ class ClientManager {
   private client: WalletClient | null = null;
   private publicClient: Client | null = null;
   private account: string | null = null;
-  private initializePromise: Promise<void>;
+  private initializePromise: Promise<void> | null = null;
 
   constructor() {
-    this.initializePromise = this.initialize();
+    this.safeInitialize();
   }
 
   private isBrowser(): boolean {
-    return typeof window !== "undefined" && typeof window.ethereum !== "undefined";
+    try {
+      return typeof window !== "undefined" && typeof window.ethereum !== "undefined";
+    } catch (error) {
+      console.error("Environment check failed:", error);
+      return false;
+    }
   }
 
-  private async createViemClient(useWalletClient: boolean): Promise<Client | WalletClient> {
-    const transport = this.isBrowser()
-      ? custom(window.ethereum!)
-      : http("https://endpoints.omniatech.io/v1/eth/sepolia/public");
+  private async createViemClient(useWalletClient: boolean): Promise<Client | WalletClient | null> {
+    try {
+      const transport = this.isBrowser()
+        ? custom(window.ethereum)
+        : http("https://endpoints.omniatech.io/v1/eth/sepolia/public");
 
-    const clientOptions = {
-      batch: { multicall: true },
-      chain: sepolia,
-      transport,
-    };
+      const clientOptions = {
+        batch: { multicall: true },
+        chain: sepolia,
+        transport,
+      };
 
-    return useWalletClient ? createWalletClient(clientOptions) : createClient(clientOptions);
+      return useWalletClient ? await createWalletClient(clientOptions) : await createClient(clientOptions);
+    } catch (error) {
+      console.error("Failed to create Viem client:", error);
+      return null;
+    }
   }
 
   private async initialize(): Promise<void> {
-    this.publicClient = (await this.createViemClient(false)) as Client;
-    this.client = (await this.createViemClient(true)) as WalletClient;
+    try {
+      const publicClient = await this.createViemClient(false);
+      const client = await this.createViemClient(true);
 
-    if (this.client && "getAddresses" in this.client) {
-      const addresses = await this.client.getAddresses();
-      if (addresses.length > 0) {
-        this.account = addresses[0];
+      if (!publicClient || !client) {
+        throw new Error("Failed to initialize Viem clients.");
       }
+
+      this.publicClient = publicClient as Client;
+      this.client = client as WalletClient;
+
+      if ("getAddresses" in this.client) {
+        const addresses = await this.client.getAddresses();
+        if (addresses.length > 0) {
+          this.account = addresses[0];
+        }
+      }
+    } catch (error) {
+      console.error("Initialization failed:", error);
     }
+  }
+
+  private safeInitialize() {
+    this.initializePromise = this.initialize().catch((error) => {
+      console.error("Safe initialization failed:", error);
+      this.initializePromise = null; // Allow retrying initialization
+    });
   }
 
   public getClient(): WalletClient | null {
@@ -54,6 +82,10 @@ class ClientManager {
   }
 
   public async ensureInitialized(): Promise<void> {
+    if (!this.initializePromise) {
+      console.warn("ClientManager was not initialized. Retrying...");
+      this.safeInitialize();
+    }
     await this.initializePromise;
   }
 }
