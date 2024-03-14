@@ -1,5 +1,6 @@
 import { Address, getContract, maxUint256, parseAbi } from "viem";
 
+import { tokenExchangeAbi } from "./abis/tokenExchange";
 import { client, publicClient } from "./client";
 import { EXCHANGE_ADDRESS } from "./constants";
 
@@ -30,11 +31,6 @@ interface IExchangeContract {
   };
 }
 
-const abiExchange = parseAbi([
-  "function buyToken(address token, uint256 reserveAmount)",
-  "function sellToken(address token, uint256 tokenAmount)",
-]);
-
 class TokenExchange {
   private exchangeContract: IExchangeContract;
 
@@ -45,7 +41,7 @@ class TokenExchange {
   private initializeContract(tokenExchangeAddress: Address): IExchangeContract {
     const contract = getContract({
       address: tokenExchangeAddress,
-      abi: abiExchange,
+      abi: tokenExchangeAbi,
       client: { public: publicClient, wallet: client },
     });
 

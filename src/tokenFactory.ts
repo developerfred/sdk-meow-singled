@@ -1,5 +1,6 @@
 import { Address, getContract, parseAbi } from "viem";
 
+import { tokenFactoryAbi } from "./abis/tokenFactory";
 import { client, publicClient } from "./client";
 import { TOKEN_FACTORY } from "./constants";
 
@@ -25,20 +26,13 @@ interface TokenConfig {
   reserveWeight: string;
 }
 
-const abiFactory = parseAbi([
-  "function createToken(string name, string symbol, uint256 initialSupply, uint256 reserveWeight, uint256 slope, address creator, address reserveTokenAddress, address _exchangeAddress) returns (address tokenAddress)",
-  "function getTokenConfig(address tokenAddress) view returns (tuple(address tokenAddress, address reserveToken, uint256 slope, uint256 reserveWeight), uint256 totalSupply)",
-  "function tokenConfigs(address) view returns (address tokenAddress, address reserveToken, uint256 slope, uint256 reserveWeight)",
-  "event TokenCreated(address indexed tokenAddress, address indexed creator)",
-]);
-
 export class TokenFactory {
   private tokenFactoryContract: ITokenFactoryContract;
 
   constructor(tokenFactoryAddress: Address = TOKEN_FACTORY) {
     this.tokenFactoryContract = getContract({
       address: tokenFactoryAddress,
-      abi: abiFactory,
+      abi: tokenFactoryAbi,
       client: { public: publicClient, wallet: client },
     }) as unknown as ITokenFactoryContract;
   }
