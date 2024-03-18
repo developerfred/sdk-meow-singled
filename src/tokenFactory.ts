@@ -76,16 +76,21 @@ export class TokenFactory {
       throw new Error("Contract not ready");
     }
 
-    return this.contract.write.createToken(
-      nameToken,
-      symbolToken,
-      initialSupplyToken,
-      reserveWeightToken,
-      slopeToken,
-      creatorToken,
-      reserveTokenAddressToken,
-      exchangeAddressToken,
-    );
+    try {
+      return await this.contract.write.createToken(
+        nameToken,
+        symbolToken,
+        initialSupplyToken,
+        reserveWeightToken,
+        slopeToken,
+        creatorToken,
+        reserveTokenAddressToken,
+        exchangeAddressToken,
+      );
+    } catch (error) {
+      console.error("Error calling createToken on the contract:", error);
+      throw error;
+    }
   }
 
   async getTokenConfig(tokenAddress: Address): Promise<TokenConfig> {
