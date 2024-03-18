@@ -90,13 +90,13 @@ export class TokenFactory {
           wallet: walletClient,
         },
       });
-
+      // @ts-ignore
       if (!tokenFactoryContract || typeof tokenFactoryContract.write.createToken !== "function") {
         throw new Error("Contract not properly initialized or createToken function is not available.");
       }
 
       console.log("Contract is ready for interaction.");
-
+      // @ts-ignore
       return await tokenFactoryContract.write.createToken(
         nameToken,
         symbolToken,
