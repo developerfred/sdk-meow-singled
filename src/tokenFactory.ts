@@ -38,6 +38,7 @@ export class TokenFactory {
   public async initialize(): Promise<void> {
     try {
       await clientManager.ensureInitialized();
+
       // @ts-ignore
       this.contract = await getContract<ITokenFactoryContract>({
         abi: tokenFactoryAbi,
@@ -71,12 +72,32 @@ export class TokenFactory {
     creatorToken: Address,
     reserveTokenAddressToken: Address,
     exchangeAddressToken: Address,
+    account?: Address,
   ): Promise<string> {
     if (!this.isContractReady || !this.contract) {
       throw new Error("Contract not ready");
     }
     try {
-      return await this.contract.write.createToken(
+      const walletClient = await clientManager.getWalletClient(account);
+      if (!walletClient) {
+        throw new Error("Failed to get wallet client.");
+      }
+      // @ts-ignore
+      const tokenFactoryContract = await getContract<ITokenFactoryContract>({
+        abi: tokenFactoryAbi,
+        address: this.tokenFactoryAddress,
+        client: {
+          wallet: walletClient,
+        },
+      });
+
+      if (!tokenFactoryContract || typeof tokenFactoryContract.write.createToken !== "function") {
+        throw new Error("Contract not properly initialized or createToken function is not available.");
+      }
+
+      console.log("Contract is ready for interaction.");
+
+      return await tokenFactoryContract.write.createToken(
         nameToken,
         symbolToken,
         initialSupplyToken,

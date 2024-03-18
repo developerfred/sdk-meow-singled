@@ -1,4 +1,4 @@
-import { Client, WalletClient, createClient, createWalletClient, custom, http } from "viem";
+import { Address, Client, WalletClient, createClient, createWalletClient, custom, http } from "viem";
 import { sepolia } from "viem/chains";
 
 class ClientManager {
@@ -84,6 +84,23 @@ class ClientManager {
       console.error("Safe initialization failed:", error);
       this.initializePromise = null; // Allow retrying initialization
     });
+  }
+
+  public async getWalletClient(account?: Address): Promise<WalletClient | null> {
+    if (account && this.isBrowser()) {
+      try {
+        const client = await createWalletClient({
+          account,
+          chain: sepolia,
+          transport: custom(window.ethereum),
+        });
+        return client;
+      } catch (error) {
+        console.error("Failed to create wallet client with specified account:", error);
+        return null;
+      }
+    }
+    return this.client;
   }
 
   public getClient(): WalletClient | null {
