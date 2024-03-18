@@ -66,7 +66,7 @@ class ClientManager {
       this.account = account;
 
       const publicClient = await this.createViemClient(false);
-      const client = await this.createViemClient(true);
+      const client = await this.createViemClient(true, account);
 
       if (!publicClient || !client) {
         throw new Error("Failed to initialize Viem clients.");
