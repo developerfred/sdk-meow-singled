@@ -75,7 +75,6 @@ export class TokenFactory {
     if (!this.isContractReady || !this.contract) {
       throw new Error("Contract not ready");
     }
-
     try {
       return await this.contract.write.createToken(
         nameToken,
