@@ -20,7 +20,24 @@ class ClientManager {
     }
   }
 
-  private async createViemClient(useWalletClient: boolean): Promise<Client | WalletClient | null> {
+  private async requestAccount(): Promise<string | null> {
+    if (!this.isBrowser()) {
+      return null;
+    }
+
+    try {
+      const accounts = await window.ethereum!.request({ method: "eth_requestAccounts" });
+      return accounts.length > 0 ? accounts[0] : null;
+    } catch (error) {
+      console.error("Failed to request account:", error);
+      return null;
+    }
+  }
+
+  private async createViemClient(
+    useWalletClient: boolean,
+    account: string | null = null,
+  ): Promise<Client | WalletClient | null> {
     try {
       const transport = this.isBrowser()
         ? custom(window.ethereum)
@@ -32,6 +49,10 @@ class ClientManager {
         transport,
       };
 
+      if (useWalletClient && account) {
+        Object.assign(clientOptions, { account });
+      }
+
       return useWalletClient ? await createWalletClient(clientOptions) : await createClient(clientOptions);
     } catch (error) {
       console.error("Failed to create Viem client:", error);
@@ -41,6 +62,9 @@ class ClientManager {
 
   private async initialize(): Promise<void> {
     try {
+      const account = await this.requestAccount();
+      this.account = account;
+
       const publicClient = await this.createViemClient(false);
       const client = await this.createViemClient(true);
 
@@ -50,13 +74,6 @@ class ClientManager {
 
       this.publicClient = publicClient as Client;
       this.client = client as WalletClient;
-
-      if ("getAddresses" in this.client) {
-        const addresses = await this.client.getAddresses();
-        if (addresses.length > 0) {
-          this.account = addresses[0];
-        }
-      }
     } catch (error) {
       console.error("Initialization failed:", error);
     }
