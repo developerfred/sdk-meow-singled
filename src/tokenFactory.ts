@@ -43,6 +43,7 @@ export class TokenFactory {
         abi: tokenFactoryAbi,
         address: this.tokenFactoryAddress,
         client: await clientManager.getClient(),
+        account: await clientManager.getAccount(),
       });
       this.isContractReady = true;
       console.log("TokenFactory contract initialized successfully.");
@@ -56,29 +57,35 @@ export class TokenFactory {
     return BigInt(number);
   }
 
+  private ensureContractReady(): void {
+    if (!this.isContractReady || !this.contract) {
+      throw new Error("Contract not ready");
+    }
+  }
+
   async createToken(
-    name: string,
-    symbol: string,
-    initialSupply: number,
-    reserveWeight: number,
-    slope: number,
-    creator: Address,
-    reserveTokenAddress: Address,
-    exchangeAddress: Address,
+    nameToken: string,
+    symbolToken: string,
+    initialSupplyToken: bigint,
+    reserveWeightToken: bigint,
+    slopeToken: bigint,
+    creatorToken: Address,
+    reserveTokenAddressToken: Address,
+    exchangeAddressToken: Address,
   ): Promise<string> {
     if (!this.isContractReady || !this.contract) {
       throw new Error("Contract not ready");
     }
 
     return this.contract.write.createToken(
-      name,
-      symbol,
-      this.toBigInt(initialSupply),
-      this.toBigInt(reserveWeight),
-      this.toBigInt(slope),
-      creator,
-      reserveTokenAddress,
-      exchangeAddress,
+      nameToken,
+      symbolToken,
+      initialSupplyToken,
+      reserveWeightToken,
+      slopeToken,
+      creatorToken,
+      reserveTokenAddressToken,
+      exchangeAddressToken,
     );
   }
 
