@@ -43,7 +43,6 @@ export class TokenFactory {
         abi: tokenFactoryAbi,
         address: this.tokenFactoryAddress,
         client: await clientManager.getClient(),
-        account: await clientManager.getAccount(),
       });
       this.isContractReady = true;
       console.log("TokenFactory contract initialized successfully.");
