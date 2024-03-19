@@ -77,7 +77,7 @@ export class TokenFactory {
       throw new Error("Contract not ready");
     }
     try {
-      const walletClient = await clientManager.getWalletClient(account);
+      const walletClient = await clientManager.getWalletClient();
       if (!walletClient) {
         throw new Error("Failed to get wallet client.");
       }
@@ -95,6 +95,7 @@ export class TokenFactory {
       }
 
       console.log("Contract is ready for interaction.");
+
       // @ts-ignore
       return await tokenFactoryContract.write.createToken(
         nameToken,
