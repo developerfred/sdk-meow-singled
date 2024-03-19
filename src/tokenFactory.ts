@@ -72,7 +72,6 @@ export class TokenFactory {
     creatorToken: Address,
     reserveTokenAddressToken: Address,
     exchangeAddressToken: Address,
-    account?: Address,
   ): Promise<string> {
     if (!this.isContractReady || !this.contract) {
       throw new Error("Contract not ready");
