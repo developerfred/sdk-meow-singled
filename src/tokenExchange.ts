@@ -1,5 +1,6 @@
 import { Address, getContract, maxUint256, parseAbi } from "viem";
 
+import { erc20Abi } from "./abis/erc20ABI";
 import { tokenExchangeAbi } from "./abis/tokenExchange";
 import { clientManager } from "./clientManager";
 import { EXCHANGE_ADDRESS } from "./constants";
@@ -35,6 +36,12 @@ interface IExchangeContract {
   };
 }
 
+interface IERC20Contract {
+  write: {
+    approve: (spender: Address, amount: bigint) => Promise<string>;
+  };
+}
+
 class TokenExchange {
   private exchangeContract: IExchangeContract;
 
@@ -55,6 +62,28 @@ class TokenExchange {
     return contract as unknown as IExchangeContract;
   }
 
+  private getERC20Contract(tokenAddress: Address): IERC20Contract {
+    // @ts-ignore
+    const contract = getContract<IERC20Contract>({
+      address: tokenAddress,
+      abi: erc20Abi,
+      client: clientManager.getClient(),
+    });
+    // @ts-ignore
+    return contract;
+  }
+
+  private async ensureApprovalAndBuyTokens(tokenAddress: Address, reserveAmount: bigint): Promise<string> {
+    try {
+      return this.executeTokenOperation("buyToken", tokenAddress, reserveAmount);
+    } catch (error) {
+      console.error("Purchase failed, attempting to approve...", error);
+      const erc20Contract = this.getERC20Contract(tokenAddress);
+      const approvalHash = await erc20Contract.write.approve(EXCHANGE_ADDRESS, reserveAmount);
+      console.log(`Approval granted. Transaction hash: ${approvalHash}`);
+      return approvalHash;
+    }
+  }
   private async executeTokenOperation(
     operation: keyof IExchangeContract["write"],
     tokenAddress: Address,
@@ -78,6 +107,13 @@ class TokenExchange {
 
   async sellTokens(tokenAddress: Address, tokenAmount: typeof maxUint256): Promise<string> {
     return this.executeTokenOperation("sellToken", tokenAddress, tokenAmount);
+  }
+
+  public async approveTokens(tokenAddress: Address, amount: bigint): Promise<string> {
+    const erc20Contract = this.getERC20Contract(tokenAddress);
+    const approvalHash = await erc20Contract.write.approve(EXCHANGE_ADDRESS, amount);
+    console.log(`Tokens approved. Transaction hash: ${approvalHash}`);
+    return approvalHash;
   }
 }
 
