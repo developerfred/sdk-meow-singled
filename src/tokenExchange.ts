@@ -30,22 +30,38 @@ interface IERC20Contract {
 
 class TokenExchange {
   private exchangeContract: IExchangeContract;
+  private isInitialized: boolean = false;
 
   constructor(tokenExchangeAddress: Address = EXCHANGE_ADDRESS) {
-    this.exchangeContract = this.initializeContract(tokenExchangeAddress, tokenExchangeAbi) as IExchangeContract;
-    console.log(`TokenExchange contract initialized at address: ${tokenExchangeAddress}`);
+    this.initializeContract(tokenExchangeAddress, tokenExchangeAbi)
+      .then((contract) => {
+        this.exchangeContract = contract as IExchangeContract;
+        this.isInitialized = true;
+        console.log(`TokenExchange contract initialized at address: ${tokenExchangeAddress}`);
+      })
+      .catch((error) => {
+        console.error("Failed to initialize the exchange contract:", error);
+        this.isInitialized = false;
+      });
   }
 
-  private initializeContract<T>(address: Address, abi: any): T {
+  private async initializeContract<T>(address: Address, abi: any): Promise<T> {
     console.log(`Initializing contract at address: ${address}`);
-    return getContract({
+    const contract = await getContract({
       address,
       abi,
       client: {
         public: clientManager.getPublicClient()!,
         wallet: clientManager.getClient()!,
       },
-    }) as T;
+    });
+    return contract as T;
+  }
+
+  private async ensureContractInitialized(): Promise<void> {
+    while (!this.isInitialized) {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
   }
 
   private async executeTokenOperation(
@@ -53,6 +69,7 @@ class TokenExchange {
     tokenAddress: Address,
     amount: typeof maxUint256,
   ): Promise<string> {
+    await this.ensureContractInitialized();
     console.log(`Attempting to ${operation} with token at address: ${tokenAddress} for amount: ${amount}`);
     try {
       const hash = await this.exchangeContract.write[operation](tokenAddress, amount);
@@ -77,9 +94,10 @@ class TokenExchange {
   }
 
   public async approveTokens(tokenAddress: Address, amount: bigint): Promise<string> {
+    await this.ensureContractInitialized();
     console.log(`Approving tokens... Token Address: ${tokenAddress}, Amount: ${amount}`);
-    const erc20Contract = this.initializeContract<IERC20Contract>(tokenAddress, erc20Abi);
-    const approvalHash = await erc20Contract.write.approve(EXCHANGE_ADDRESS, amount);
+    const erc20Contract = this.initializeContract<IERC20Contract>(tokenAddress, erc20Abi) as Promise<IERC20Contract>;
+    const approvalHash = await (await erc20Contract).write.approve(EXCHANGE_ADDRESS, amount);
     console.log(
       `Tokens approved. Token Address: ${tokenAddress}, Amount: ${amount}, Approval Transaction Hash: ${approvalHash}`,
     );

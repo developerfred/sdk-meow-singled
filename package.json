@@ -1,7 +1,7 @@
 {
   "name": "@codingsheth/meow-sdk",
   "description": "the meow single pool sdk",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/developerfred/sdk-meow-singled.git"
