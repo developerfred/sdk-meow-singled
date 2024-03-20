@@ -29,7 +29,7 @@ interface IERC20Contract {
 }
 
 class TokenExchange {
-  private exchangeContract: IExchangeContract;
+  private exchangeContract!: IExchangeContract;
   private isInitialized: boolean = false;
 
   constructor(tokenExchangeAddress: Address = EXCHANGE_ADDRESS) {
@@ -67,7 +67,7 @@ class TokenExchange {
   private async executeTokenOperation(
     operation: keyof IExchangeContract["write"],
     tokenAddress: Address,
-    amount: typeof maxUint256,
+    amount: bigint,
   ): Promise<string> {
     await this.ensureContractInitialized();
     console.log(`Attempting to ${operation} with token at address: ${tokenAddress} for amount: ${amount}`);
@@ -85,12 +85,12 @@ class TokenExchange {
     }
   }
 
-  public async buyTokens(tokenAddress: Address, reserveAmount: typeof maxUint256): Promise<string> {
-    return this.executeTokenOperation("buyToken", tokenAddress, reserveAmount);
+  public async buyTokens(tokenAddress: Address, amount: bigint): Promise<string> {
+    return this.executeTokenOperation("buyToken", tokenAddress, amount);
   }
 
-  public async sellTokens(tokenAddress: Address, tokenAmount: typeof maxUint256): Promise<string> {
-    return this.executeTokenOperation("sellToken", tokenAddress, tokenAmount);
+  public async sellTokens(tokenAddress: Address, amount: bigint): Promise<string> {
+    return this.executeTokenOperation("sellToken", tokenAddress, amount);
   }
 
   public async approveTokens(tokenAddress: Address, amount: bigint): Promise<string> {
