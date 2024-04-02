@@ -1,9 +1,240 @@
 import { Address, getContract, maxUint256 } from "viem";
+import { parseAbi } from "viem";
 
-import { erc20Abi } from "./abis/erc20ABI";
+// import { erc20Abi } from "./abis/erc20ABI";
 import { tokenExchangeAbi } from "./abis/tokenExchange";
 import { clientManager } from "./clientManager";
 import { EXCHANGE_ADDRESS } from "./constants";
+
+const abiERC20 = parseAbi([
+  "function approve(address spender, uint256 amount) external returns (bool)",
+  "event Approval(address indexed owner, address indexed spender, uint256 value)",
+  "function balanceOf(address owner) view returns (uint256)",
+  "event Transfer(address indexed from, address indexed to, uint256 amount)",
+]);
+
+export const erc20Abi = [
+  {
+    constant: true,
+    inputs: [],
+    name: "name",
+    outputs: [
+      {
+        name: "",
+        type: "string",
+      },
+    ],
+    payable: false,
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    constant: false,
+    inputs: [
+      {
+        name: "_spender",
+        type: "address",
+      },
+      {
+        name: "_value",
+        type: "uint256",
+      },
+    ],
+    name: "approve",
+    outputs: [
+      {
+        name: "",
+        type: "bool",
+      },
+    ],
+    payable: false,
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    constant: true,
+    inputs: [],
+    name: "totalSupply",
+    outputs: [
+      {
+        name: "",
+        type: "uint256",
+      },
+    ],
+    payable: false,
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    constant: false,
+    inputs: [
+      {
+        name: "_from",
+        type: "address",
+      },
+      {
+        name: "_to",
+        type: "address",
+      },
+      {
+        name: "_value",
+        type: "uint256",
+      },
+    ],
+    name: "transferFrom",
+    outputs: [
+      {
+        name: "",
+        type: "bool",
+      },
+    ],
+    payable: false,
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    constant: true,
+    inputs: [],
+    name: "decimals",
+    outputs: [
+      {
+        name: "",
+        type: "uint8",
+      },
+    ],
+    payable: false,
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    constant: true,
+    inputs: [
+      {
+        name: "_owner",
+        type: "address",
+      },
+    ],
+    name: "balanceOf",
+    outputs: [
+      {
+        name: "balance",
+        type: "uint256",
+      },
+    ],
+    payable: false,
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    constant: true,
+    inputs: [],
+    name: "symbol",
+    outputs: [
+      {
+        name: "",
+        type: "string",
+      },
+    ],
+    payable: false,
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    constant: false,
+    inputs: [
+      {
+        name: "_to",
+        type: "address",
+      },
+      {
+        name: "_value",
+        type: "uint256",
+      },
+    ],
+    name: "transfer",
+    outputs: [
+      {
+        name: "",
+        type: "bool",
+      },
+    ],
+    payable: false,
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    constant: true,
+    inputs: [
+      {
+        name: "_owner",
+        type: "address",
+      },
+      {
+        name: "_spender",
+        type: "address",
+      },
+    ],
+    name: "allowance",
+    outputs: [
+      {
+        name: "",
+        type: "uint256",
+      },
+    ],
+    payable: false,
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    payable: true,
+    stateMutability: "payable",
+    type: "fallback",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        name: "owner",
+        type: "address",
+      },
+      {
+        indexed: true,
+        name: "spender",
+        type: "address",
+      },
+      {
+        indexed: false,
+        name: "value",
+        type: "uint256",
+      },
+    ],
+    name: "Approval",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        name: "from",
+        type: "address",
+      },
+      {
+        indexed: true,
+        name: "to",
+        type: "address",
+      },
+      {
+        indexed: false,
+        name: "value",
+        type: "uint256",
+      },
+    ],
+    name: "Transfer",
+    type: "event",
+  },
+] as const;
 
 type ContractFunction<T extends any[] = any[], R = any> = (...args: T) => Promise<R>;
 
@@ -16,6 +247,10 @@ interface IExchangeContract {
   write: {
     buyToken: ContractFunction<[Address, typeof maxUint256], string>;
     sellToken: ContractFunction<[Address, typeof maxUint256], string>;
+  };
+  read: {
+    calculateExchangeAmount: ContractFunction<[Address, bigint, boolean], bigint>;
+    tokenFactory: ContractFunction<[], Address>;
   };
   address: Address;
   abi: typeof tokenExchangeAbi;
@@ -96,12 +331,40 @@ class TokenExchange {
   public async approveTokens(tokenAddress: Address, amount: bigint): Promise<string> {
     await this.ensureContractInitialized();
     console.log(`Approving tokens... Token Address: ${tokenAddress}, Amount: ${amount}`);
-    const erc20Contract = this.initializeContract<IERC20Contract>(tokenAddress, erc20Abi) as Promise<IERC20Contract>;
-    const approvalHash = await (await erc20Contract).write.approve(EXCHANGE_ADDRESS, amount);
+    const erc20Contract = await this.initializeContract<IERC20Contract>(tokenAddress, erc20Abi);
+    const approvalHash = await erc20Contract.write.approve(EXCHANGE_ADDRESS, amount);
     console.log(
       `Tokens approved. Token Address: ${tokenAddress}, Amount: ${amount}, Approval Transaction Hash: ${approvalHash}`,
     );
     return approvalHash;
+  }
+
+  public async calculateExchangeAmount(tokenAddress: Address, amount: bigint, isBuying: boolean): Promise<bigint> {
+    await this.ensureContractInitialized();
+    console.log(
+      `Calculating exchange amount for token at address: ${tokenAddress} with amount: ${amount} and isBuying: ${isBuying}`,
+    );
+    try {
+      const calculatedAmount = await this.exchangeContract.read.calculateExchangeAmount(tokenAddress, amount, isBuying);
+      console.log(`Calculated exchange amount: ${calculatedAmount}`);
+      return calculatedAmount;
+    } catch (error) {
+      console.error(`Error calculating exchange amount. Error: ${error}`);
+      throw error;
+    }
+  }
+
+  public async tokenFactory(): Promise<Address> {
+    await this.ensureContractInitialized();
+    console.log(`Retrieving token factory address`);
+    try {
+      const tokenFactoryAddress = await this.exchangeContract.read.tokenFactory();
+      console.log(`Token factory address: ${tokenFactoryAddress}`);
+      return tokenFactoryAddress;
+    } catch (error) {
+      console.error(`Error retrieving token factory address. Error: ${error}`);
+      throw error;
+    }
   }
 }
 

@@ -6,7 +6,16 @@ import { TOKEN_FACTORY } from "./constants";
 
 interface ITokenFactoryContract {
   read: {
+    defaultReserveToken(): Promise<Address>;
     getTokenConfig(tokenAddress: Address): Promise<TokenConfig>;
+    getTokensBatch(from: bigint, to: bigint): Promise<Address[]>;
+    initialize(defaultReserveToken: Address): Promise<void>;
+    isTokenFromFactory(tokenAddress: Address): Promise<boolean>;
+    listAllTokens(): Promise<Address[]>;
+    owner(): Promise<Address>;
+    tokenConfigs(tokenAddress: Address): Promise<TokenConfig>;
+    tokensCreatedBy(creator: Address): Promise<Address[]>;
+    totalCreatedTokens(): Promise<bigint>;
   };
   write: {
     createToken(
@@ -19,6 +28,8 @@ interface ITokenFactoryContract {
       reserveTokenAddress: Address,
       exchangeAddress: Address,
     ): Promise<string>;
+    renounceOwnership(): Promise<void>;
+    transferOwnership(newOwner: Address): Promise<void>;
   };
 }
 
@@ -61,6 +72,21 @@ export class TokenFactory {
     if (!this.isContractReady || !this.contract) {
       throw new Error("Contract not ready");
     }
+  }
+
+  async defaultReserveToken(): Promise<Address> {
+    this.ensureContractReady();
+    return this.contract!.read.defaultReserveToken();
+  }
+
+  async listAllTokens(): Promise<Address[]> {
+    this.ensureContractReady();
+    return this.contract!.read.listAllTokens();
+  }
+
+  async isTokenFromFactory(tokenAddress: Address): Promise<boolean> {
+    this.ensureContractReady();
+    return this.contract!.read.isTokenFromFactory(tokenAddress);
   }
 
   async createToken(
