@@ -1,10 +1,12 @@
 import { Address, getContract, maxUint256 } from "viem";
 import { parseAbi } from "viem";
 
-// import { erc20Abi } from "./abis/erc20ABI";
+
+
 import { tokenExchangeAbi } from "./abis/tokenExchange";
 import { clientManager } from "./clientManager";
 import { EXCHANGE_ADDRESS } from "./constants";
+
 
 const abiERC20 = parseAbi([
   "function approve(address spender, uint256 amount) external returns (bool)",
@@ -261,6 +263,11 @@ interface IERC20Contract {
   write: {
     approve: (spender: Address, amount: bigint) => Promise<string>;
   };
+  read: {
+    allowance: (owner: Address, spender: Address) => Promise<bigint>;
+    symbol: () => Promise<string>;
+    name: () => Promise<string>;
+  };
 }
 
 class TokenExchange {
@@ -320,6 +327,38 @@ class TokenExchange {
     }
   }
 
+  public async checkAllowance(tokenAddress: Address, spenderAddress: Address): Promise<bigint> {
+    await this.ensureContractInitialized();
+    //@ts-ignore
+    const erc20Contract = await this.initializeContract<IERC20Contract>(tokenAddress, erc20Abi);
+    //@ts-ignore
+    const allowance = await erc20Contract.read.allowance(clientManager.getClient().address, spenderAddress);
+    console.log(
+      `Current allowance for token ${tokenAddress} to ${spenderAddress} is: ${allowance}`,
+    );
+    return allowance;
+  }
+
+  public async checkAndApproveAllowanceIfNeeded(
+    tokenAddress: Address,
+    spenderAddress: Address,
+    amount: bigint,
+  ): Promise<void> {
+    await this.ensureContractInitialized();
+    console.log(`Checking allowance for token at address: ${tokenAddress}`);
+
+    const erc20Contract = await this.initializeContract<IERC20Contract>(tokenAddress, erc20Abi);
+    //@ts-ignore
+    const currentAllowance = await erc20Contract.read.allowance(clientManager.getClient().address, spenderAddress);
+
+    if (currentAllowance < amount) {
+      console.log(`Allowance is not sufficient. Approving tokens...`);
+      await this.approveTokens(tokenAddress, amount);
+    } else {
+      console.log(`Allowance is sufficient for the transaction.`);
+    }
+  }
+
   public async buyTokens(tokenAddress: Address, amount: bigint): Promise<string> {
     return this.executeTokenOperation("buyToken", tokenAddress, amount);
   }
@@ -363,6 +402,22 @@ class TokenExchange {
       return tokenFactoryAddress;
     } catch (error) {
       console.error(`Error retrieving token factory address. Error: ${error}`);
+      throw error;
+    }
+  }
+
+  public async getTokenSymbol(tokenAddress: Address): Promise<string> {
+    await this.ensureContractInitialized();
+    console.log(`Retrieving symbol for token at address: ${tokenAddress}`);
+
+    try {
+      const erc20Contract = await this.initializeContract<IERC20Contract>(tokenAddress, erc20Abi);
+
+      const symbol = await erc20Contract.read.symbol();
+      console.log(`Token symbol: ${symbol}`);
+      return symbol;
+    } catch (error) {
+      console.error(`Error retrieving token symbol for address ${tokenAddress}. Error: ${error}`);
       throw error;
     }
   }
