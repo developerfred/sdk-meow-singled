@@ -1,4 +1,4 @@
-import { Address, getContract, maxUint256 } from "viem";
+import { Address, getAddress, getContract, isAddress, maxUint256 } from "viem";
 import { parseAbi } from "viem";
 
 
@@ -14,6 +14,22 @@ const abiERC20 = parseAbi([
   "function balanceOf(address owner) view returns (uint256)",
   "event Transfer(address indexed from, address indexed to, uint256 amount)",
 ]);
+
+export const MEOWAbi = [
+  {
+    type: "function",
+    name: "depositReserveToken",
+    inputs: [
+      {
+        name: "amount",
+        type: "uint256",
+        internalType: "uint256",
+      },
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+] as const;
 
 export const erc20Abi = [
   {
@@ -270,6 +286,13 @@ interface IERC20Contract {
   };
 }
 
+interface IMEOWChild {
+  write: {
+    depositReserveToken: (spender: Address, amount: bigint) => Promise<string>;
+  };
+}
+
+
 class TokenExchange {
   private exchangeContract!: IExchangeContract;
   private isInitialized: boolean = false;
@@ -327,16 +350,29 @@ class TokenExchange {
     }
   }
 
-  public async checkAllowance(tokenAddress: Address, spenderAddress: Address): Promise<bigint> {
-    await this.ensureContractInitialized();
-    //@ts-ignore
-    const erc20Contract = await this.initializeContract<IERC20Contract>(tokenAddress, erc20Abi);
-    //@ts-ignore
-    const allowance = await erc20Contract.read.allowance(clientManager.getClient().address, spenderAddress);
-    console.log(
-      `Current allowance for token ${tokenAddress} to ${spenderAddress} is: ${allowance}`,
-    );
-    return allowance;
+  public async checkAllowance(exchangeAddress: Address, tokenAddress: Address, owner: Address): Promise<bigint> {
+    try {
+      await this.ensureContractInitialized();
+
+      const erc20Contract = await this.initializeContract<IERC20Contract>(tokenAddress, erc20Abi);
+
+      const normalizedOwnerAddress = isAddress(owner) ? owner : getAddress(owner);
+      const normalizedSpenderAddress = isAddress(exchangeAddress) ? exchangeAddress : getAddress(exchangeAddress);
+      //@ts-ignore
+      const allowance = await erc20Contract.read.allowance([normalizedSpenderAddress, normalizedOwnerAddress]);
+
+      console.log(
+        `Checked allowance for token at address ${tokenAddress} to be spent by address ${normalizedSpenderAddress}: ${allowance.toString()}`,
+      );
+
+      return BigInt(allowance.toString());
+    } catch (error) {
+      console.error(
+        `Error checking allowance for token at address ${tokenAddress} to be spent by address ${exchangeAddress}:`,
+        error,
+      );
+      throw error;
+    }
   }
 
   public async checkAndApproveAllowanceIfNeeded(
@@ -349,7 +385,7 @@ class TokenExchange {
 
     const erc20Contract = await this.initializeContract<IERC20Contract>(tokenAddress, erc20Abi);
     //@ts-ignore
-    const currentAllowance = await erc20Contract.read.allowance(clientManager.getClient().address, spenderAddress);
+    const currentAllowance = await erc20Contract.read.allowance(getAddress(tokenAddress), getAddress(spenderAddress));
 
     if (currentAllowance < amount) {
       console.log(`Allowance is not sufficient. Approving tokens...`);
@@ -371,7 +407,8 @@ class TokenExchange {
     await this.ensureContractInitialized();
     console.log(`Approving tokens... Token Address: ${tokenAddress}, Amount: ${amount}`);
     const erc20Contract = await this.initializeContract<IERC20Contract>(tokenAddress, erc20Abi);
-    const approvalHash = await erc20Contract.write.approve(EXCHANGE_ADDRESS, amount);
+    //@ts-ignore
+    const approvalHash = await erc20Contract.write.approve([EXCHANGE_ADDRESS, amount]);
     console.log(
       `Tokens approved. Token Address: ${tokenAddress}, Amount: ${amount}, Approval Transaction Hash: ${approvalHash}`,
     );
@@ -421,6 +458,38 @@ class TokenExchange {
       throw error;
     }
   }
+  //@ts-ignore
+  public async getTokenBalance(tokenAddress: Address, accountAddress: Address): Promise<bigint> {
+    await this.ensureContractInitialized();
+    console.log(`Retrieving balance for token at address: ${tokenAddress} for account: ${accountAddress}`);
+
+    try {
+      const erc20Contract = await this.initializeContract<IERC20Contract>(tokenAddress, erc20Abi);
+      //@ts-ignore
+      const balance = await erc20Contract.read.balanceOf(accountAddress);
+      console.log(`Token balance for account ${accountAddress} is: ${balance.toString()}`);
+      return balance;
+    } catch (error) {
+      console.error(
+        `Error retrieving token balance for address ${accountAddress} on token ${tokenAddress}. Error: ${error}`,
+      );
+      throw error;
+    }
+  }
+
+  public async depositReserveToken(amount: bigint, tokenAddress: Address): Promise<string> {
+    await this.ensureContractInitialized();
+    console.log(`Depositing reserve tokens... Amount: ${amount}`);
+
+    const reserveTokenContract = await this.initializeContract<IMEOWChild>(tokenAddress, MEOWAbi);
+
+    //@ts-ignore
+    const depositHash = await reserveTokenContract.write.depositReserveToke([amount]);
+    console.log(`Reserve tokens deposited. Amount: ${amount}, Deposit Transaction Hash: ${depositHash}`);
+    return depositHash;
+  }
 }
+
+
 
 export { TokenExchange };
